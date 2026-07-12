@@ -221,7 +221,7 @@ function LongerMenu({ value, distances, onChange }) {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
       >
-        {label}
+        <span className="menuButtonLabel">{label}</span>
         <ChevronDown className="chevronIcon" aria-hidden="true" />
       </button>
       {open && (
@@ -251,7 +251,7 @@ function DistanceDropdown({ value, distances, onChange, allowAll = true }) {
   return (
     <div className="menuWrap">
       <button className="menuButton active singleDropdown" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
-        {label}
+        <span className="menuButtonLabel">{label}</span>
         <ChevronDown className="chevronIcon" aria-hidden="true" />
       </button>
       {open && (
@@ -297,7 +297,7 @@ function TimeRangeMenu({ value, onChange }) {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
       >
-        {selected.label}
+        <span className="menuButtonLabel">{selected.label}</span>
         <ChevronDown className="chevronIcon" aria-hidden="true" />
       </button>
       {open && (
@@ -334,7 +334,7 @@ function PoolLengthMenu({ value, onChange }) {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
       >
-        {label}
+        <span className="menuButtonLabel">{label}</span>
         <ChevronDown className="chevronIcon" aria-hidden="true" />
       </button>
       {open && (
@@ -816,9 +816,9 @@ function StrokeRatePaceScatter({ laps }) {
 }
 
 function startOfWeek(dateValue) {
-  const date = new Date(`${dateValue}T00:00:00`);
-  const offset = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - offset);
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  const offset = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - offset);
   return date;
 }
 
@@ -833,15 +833,21 @@ function WeeklyVolumeChart({ sessions }) {
   const keys = [...totals.keys()].sort();
   const weeks = [];
   if (keys.length) {
-    const cursor = new Date(`${keys[0]}T00:00:00`);
-    const end = new Date(`${keys[keys.length - 1]}T00:00:00`);
+    const cursor = new Date(`${keys[0]}T00:00:00Z`);
+    const end = new Date(`${keys[keys.length - 1]}T00:00:00Z`);
     while (cursor <= end) {
       const key = cursor.toISOString().slice(0, 10);
       weeks.push({ key, date: new Date(cursor), distance: totals.get(key) || 0 });
-      cursor.setDate(cursor.getDate() + 7);
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
     }
   }
   const maxDistance = Math.max(1, ...weeks.map((week) => week.distance));
+  const width = Math.max(720, weeks.length * 62);
+  const height = 250;
+  const pad = { top: 28, right: 18, bottom: 42, left: 18 };
+  const plotHeight = height - pad.top - pad.bottom;
+  const slotWidth = (width - pad.left - pad.right) / Math.max(1, weeks.length);
+  const barWidth = Math.min(30, slotWidth * 0.58);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -850,15 +856,29 @@ function WeeklyVolumeChart({ sessions }) {
 
   return (
     <div className="weeklyVolumeScroll" ref={scrollRef} aria-label="Weekly swim volume, scroll horizontally for older weeks">
-      <div className="weeklyVolumeChart" style={{ width: `${Math.max(720, weeks.length * 58)}px` }}>
-        {weeks.map((week) => (
-          <div className="weeklyBarGroup" key={week.key}>
-            <span className="weeklyValue">{week.distance ? `${(week.distance / 1000).toFixed(1)}k` : ""}</span>
-            <div className="weeklyBarTrack"><i style={{ height: `${(week.distance / maxDistance) * 100}%` }} /></div>
-            <span className="weeklyLabel">{week.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-          </div>
-        ))}
-      </div>
+      <svg
+        className="weeklyVolumeChart"
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`${weeks.length} weeks of normal swim volume`}
+      >
+        <line x1={pad.left} y1={height - pad.bottom} x2={width - pad.right} y2={height - pad.bottom} className="grid" />
+        {weeks.map((week, index) => {
+          const x = pad.left + index * slotWidth + (slotWidth - barWidth) / 2;
+          const barHeight = week.distance ? Math.max(2, (week.distance / maxDistance) * plotHeight) : 0;
+          const y = height - pad.bottom - barHeight;
+          return (
+            <g className="weeklyBarGroup" key={week.key}>
+              <title>{`${week.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}: ${(week.distance / 1000).toFixed(1)} km`}</title>
+              <rect x={x} y={y} width={barWidth} height={barHeight} rx="2" className="weeklyBar" />
+              {week.distance > 0 && <text x={x + barWidth / 2} y={Math.max(13, y - 7)} textAnchor="middle" className="weeklyValue">{(week.distance / 1000).toFixed(1)}k</text>}
+              <text x={x + barWidth / 2} y={height - 17} textAnchor="middle" className="weeklyLabel">{week.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

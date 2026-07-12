@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.python_packages
+.runtime-data
+.activity-delete-stage
+fit files
+*.fit
+.DS_Store

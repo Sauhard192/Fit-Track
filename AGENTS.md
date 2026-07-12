@@ -43,11 +43,14 @@
 - Pace trend and stroke-rate analysis share lap-distance and stroke-style filters; other visualizations own their filters independently.
 - Weekly volume scrolls horizontally, with the latest weeks shown first on load and older weeks available by scrolling back.
 - Below tablet width, use bottom navigation and keep the activities table horizontally scrollable.
+- Dropdown button labels stay on one line and truncate with an ellipsis when space is limited.
 - Activities are listed latest first.
 - FIT imports show progress while the local parser rebuilds swim data; changes to generated data must not reload the page mid-import.
 - Activity deletion supports single or multi-select, always requires confirmation, and stages FIT files until the generated analytics data updates successfully.
 - Import and deletion update only affected activities; do not rescan the complete FIT archive for these actions.
 - Close confirmation dialogs when an action begins and report completed imports or deletions with temporary snackbar toasts.
+- Production runs through `server.mjs`; `DATA_DIR` must point to persistent storage for generated swim data and uploaded FIT files.
+- The current hosted version is intentionally public and has no authentication on viewing, importing, or deletion.
 
 ## Editing discipline
 
