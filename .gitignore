@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.python_packages/
+.activity-delete-stage/
+__pycache__/
+.DS_Store
+fit files/
