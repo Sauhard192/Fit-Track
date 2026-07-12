@@ -24,6 +24,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import "./styles.css";
+import { deleteStoredActivities, mergeActivityData, saveImportedActivity } from "./activityStore";
 
 const shortFilters = [25, 50, 100, 200, 400];
 const filesPerPage = 14;
@@ -1068,6 +1069,7 @@ function HardEffortTrend({ sessions }) {
 function App() {
   const fitInputRef = useRef(null);
   const toastTimerRef = useRef(null);
+  const baselineDataRef = useRef(null);
   const [data, setData] = useState(null);
   const [page, setPage] = useState("swim");
   const [distance, setDistance] = useState("All");
@@ -1088,7 +1090,13 @@ function App() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    fetch("/data/swims.json").then((res) => res.json()).then(setData);
+    fetch("/data/swims.json")
+      .then((response) => response.json())
+      .then(async (baseline) => {
+        baselineDataRef.current = baseline;
+        setData(await mergeActivityData(baseline));
+      })
+      .catch(() => showToast("Swim data could not be loaded.", "error"));
   }, []);
 
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
@@ -1111,13 +1119,11 @@ function App() {
     setImporting(true);
     setToast(null);
     try {
-      const response = await fetch(`/api/import-fit?filename=${encodeURIComponent(file.name)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/octet-stream" },
-        body: file,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "The FIT file could not be imported.");
+      if (data.sessions.some((session) => session.file === file.name)) throw new Error(`${file.name} has already been imported.`);
+      const { parseFitActivity } = await import("./fitParser");
+      const imported = await parseFitActivity(file, data.zones);
+      await saveImportedActivity(imported);
+      const result = await mergeActivityData(baselineDataRef.current);
       setData(result);
       setFilesPage(1);
       setSelectedActivities(new Set());
@@ -1146,13 +1152,8 @@ function App() {
     setDeleting(true);
     setToast(null);
     try {
-      const response = await fetch("/api/delete-activities", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ files }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "The selected activities could not be deleted.");
+      await deleteStoredActivities(files, baselineDataRef.current);
+      const result = await mergeActivityData(baselineDataRef.current);
       setData(result);
       setSelectedActivities(new Set());
       setFilesPage((current) => Math.min(current, Math.max(1, Math.ceil(result.sessions.length / filesPerPage))));

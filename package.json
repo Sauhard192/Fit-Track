@@ -2,10 +2,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1",
-    "start": "node server.mjs"
+    "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@garmin/fitsdk": "^21.208.0",
     "@vitejs/plugin-react": "^5.1.0",
     "d3-hexbin": "^0.2.2",
     "lucide-react": "^1.24.0",
